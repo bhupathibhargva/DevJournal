@@ -1,12 +1,12 @@
 {
 	"info": {
-		"_postman_id": "81ece1e1-ac56-41e2-ac30-db1542961812",
+		"_postman_id": "2575a4fa-f2df-4309-98ce-de2b1cb75170",
 		"name": "DevJournal",
-		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "post journal",
+			"name": "post journal-aws",
 			"request": {
 				"method": "POST",
 				"header": [
@@ -19,17 +19,91 @@
 					"mode": "raw",
 					"raw": "{\n        \"id\": 11,\n        \"name\": \"spring\",\n        \"content\": \"its awesome\",\n        \"tags\": [\n            {\n                \"id\": 1,\n                \"tags\": \"Spring\"\n            }\n        ]\n}"
 				},
-				"url": "localhost:8080/journal/add"
+				"url": {
+					"raw": "52.14.99.138:8090/journal/add",
+					"host": [
+						"52",
+						"14",
+						"99",
+						"138"
+					],
+					"port": "8090",
+					"path": [
+						"journal",
+						"add"
+					]
+				},
+				"description": "ip might change at please verify if at the time of use"
 			},
 			"response": []
 		},
 		{
-			"name": "localhost:8080/journal",
+			"name": "get journal -aws",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "52.14.99.138:8090/journal",
+					"host": [
+						"52",
+						"14",
+						"99",
+						"138"
+					],
+					"port": "8090",
+					"path": [
+						"journal"
+					]
+				},
+				"description": "ip might change please verify at time of use"
+			},
+			"response": []
+		},
+		{
+			"name": "get journal -local",
 			"request": {
 				"method": "GET",
 				"header": [],
 				"body": {},
-				"url": "localhost:8080/journal"
+				"url": {
+					"raw": "localhost:8080/journal",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"journal"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "post journal -local",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {},
+				"url": {
+					"raw": "localhost:8080/journal/add",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"journal",
+						"add"
+					]
+				}
 			},
 			"response": []
 		}
