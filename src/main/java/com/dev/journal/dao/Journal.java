@@ -1,20 +1,50 @@
 package com.dev.journal.dao;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import javax.persistence.*;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+
+import org.springframework.stereotype.Component;
+
+@Entity
+@Table(name = "Journal")
+@Component
 public class Journal {
 
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
     private  long id;
-    private String name;
+	
+	@NotNull
+    @Size(max = 100)
+    private String title;
+	
+	@NotNull
     private  String content;
-    private List<Tags> tags;
+	
+	public void setContent(String content) {
+		this.content = content;
+	}
+	@ManyToMany(fetch = FetchType.LAZY,
+            cascade = {
+                CascadeType.PERSIST,
+                CascadeType.MERGE
+            })
+    @JoinTable(name = "journal_tags",
+            joinColumns = { @JoinColumn(name = "journal_id") },
+            inverseJoinColumns = { @JoinColumn(name = "tag_id") })
+    private List<Tag> tags = new ArrayList<>();
   
-    public Journal(long id,String name, String content,List<Tags> tags) {
+    public Journal(long id,String title, String content,List<Tag> tags) {
         this.id = id;
-        this.name = name;
+        this.title = title;
         this.content = content;
         this.tags = tags;
     }
+    
     public Journal() {}
 
     public long getId() {
@@ -24,19 +54,17 @@ public class Journal {
         return content;
     }
 
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	public List<Tags> getTags() {
+	public List<Tag> getTags() {
 		return tags;
 	}
 
-	public void setTags(List<Tags> tags) {
+	public void setTags(List<Tag> tags) {
 		this.tags = tags;
+	}
+	public String getTitle() {
+		return title;
+	}
+	public void setTitle(String title) {
+		this.title = title;
 	}
 }
