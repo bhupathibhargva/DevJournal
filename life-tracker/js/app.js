@@ -57,6 +57,10 @@ function init() {
   });
 
   setInterval(tick, CLOCK_TICK_MS);
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* http or unsupported */ });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

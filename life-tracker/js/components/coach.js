@@ -7,6 +7,19 @@ import { state, saveState } from '../store.js';
 import { computeStats, streakOf, catDone } from '../stats.js';
 
 const AI_BTN_LABEL = '\u{1F9E0} GENERATE AI COACH REPORT';
+const GEMINI_KEY_STORE = 'bos_gemini_key';
+const GEMINI_MODEL = 'gemini-2.5-flash';
+
+function getGeminiKey() {
+  try { return window.localStorage.getItem(GEMINI_KEY_STORE) || ''; } catch (e) { return ''; }
+}
+
+function setGeminiKey(key) {
+  try {
+    if (key) window.localStorage.setItem(GEMINI_KEY_STORE, key);
+    else window.localStorage.removeItem(GEMINI_KEY_STORE);
+  } catch (e) { /* private mode */ }
+}
 
 function findItem(id) {
   for (const mode of Object.keys(ITEMS)) {
@@ -195,6 +208,35 @@ function buildAiSummary() {
   return summary;
 }
 
+function callGemini(key, prompt) {
+  return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+  })
+    .then((r) => r.json())
+    .then((data) => {
+      if (data && data.error) throw new Error(data.error.message || 'Gemini error');
+      const parts = data && data.candidates && data.candidates[0]
+        && data.candidates[0].content && data.candidates[0].content.parts || [];
+      return parts.map((p) => p.text || '').join('');
+    });
+}
+
+function callClaude(prompt) {
+  /* Keyless call — only works when the page runs inside the Claude app. */
+  return fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
+  })
+    .then((r) => r.json())
+    .then((data) => (data && data.content || [])
+      .filter((c) => c.type === 'text')
+      .map((c) => c.text)
+      .join(''));
+}
+
 function aiCoach() {
   const btn = document.getElementById('btnAI');
   const out = document.getElementById('aiOut');
@@ -213,21 +255,16 @@ function aiCoach() {
     '(4) exactly ONE change to make next week - the highest-leverage one. ' +
     'Plain text, no markdown, under 250 words, direct tone, no flattery.';
 
-  fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
-  })
-    .then((r) => r.json())
-    .then((data) => {
-      const txt = (data && data.content || [])
-        .filter((c) => c.type === 'text')
-        .map((c) => c.text)
-        .join('');
+  const key = getGeminiKey();
+  const call = key ? callGemini(key, prompt) : callClaude(prompt);
+  call
+    .then((txt) => {
       out.textContent = txt || 'No response — try again.';
     })
-    .catch(() => {
-      out.textContent = 'AI coach requires running inside the Claude app (this feature calls Claude itself). The pattern insights above work everywhere.';
+    .catch((e) => {
+      out.textContent = key
+        ? 'Gemini call failed: ' + (e.message || e) + '\nCheck the key under AI SETTINGS below and try again.'
+        : 'No AI provider available. Paste a Google Gemini API key under AI SETTINGS below (free at aistudio.google.com/app/apikey). The pattern insights above work without it.';
     })
     .finally(() => {
       btn.disabled = false;
@@ -235,6 +272,29 @@ function aiCoach() {
     });
 }
 
+function refreshKeyUi() {
+  const input = document.getElementById('aiKey');
+  const hint = document.getElementById('keyHint');
+  const saved = !!getGeminiKey();
+  input.placeholder = saved ? 'Gemini key saved ✓ — paste to replace' : 'Paste Google Gemini API key';
+  hint.textContent = saved
+    ? 'Gemini key active: AI reports use Google Gemini. The key lives only on this device and is sent only to Google.'
+    : 'Get a free key at aistudio.google.com/app/apikey. It is stored only on this device and sent only to Google when you generate a report.';
+}
+
 export function bindCoach() {
   document.getElementById('btnAI').addEventListener('click', aiCoach);
+  document.getElementById('btnKeySave').addEventListener('click', () => {
+    const input = document.getElementById('aiKey');
+    const key = input.value.trim();
+    if (key) setGeminiKey(key);
+    input.value = '';
+    refreshKeyUi();
+  });
+  document.getElementById('btnKeyClear').addEventListener('click', () => {
+    setGeminiKey('');
+    document.getElementById('aiKey').value = '';
+    refreshKeyUi();
+  });
+  refreshKeyUi();
 }

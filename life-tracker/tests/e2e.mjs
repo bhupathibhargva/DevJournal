@@ -134,6 +134,38 @@ await check('coach tab renders insights and dismiss works', async () => {
 });
 await shot('4-coach');
 
+await check('manifest is served and the service worker registers', async () => {
+  const res = await page.request.get(`http://localhost:${PORT}/manifest.webmanifest`);
+  assert.equal(res.status(), 200);
+  assert.equal((await res.json()).display, 'standalone');
+  await page.waitForFunction(() => navigator.serviceWorker.ready.then(() => true));
+});
+
+await check('gemini key can be saved and cleared', async () => {
+  await page.fill('#aiKey', 'test-key-123');
+  await page.click('#btnKeySave');
+  await page.waitForFunction(() => localStorage.getItem('bos_gemini_key') === 'test-key-123');
+  assert.match(await page.locator('#keyHint').textContent(), /Gemini key active/);
+  await page.click('#btnKeyClear');
+  await page.waitForFunction(() => localStorage.getItem('bos_gemini_key') === null);
+});
+
+await check('AI coach calls Gemini with the saved key', async () => {
+  await page.route('**/generativelanguage.googleapis.com/**', (route) => {
+    assert.equal(route.request().headers()['x-goog-api-key'], 'test-key-123');
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ candidates: [{ content: { parts: [{ text: 'STUB COACH REPORT' }] } }] })
+    });
+  });
+  await page.fill('#aiKey', 'test-key-123');
+  await page.click('#btnKeySave');
+  await page.click('#btnAI');
+  await page.waitForFunction(() => document.getElementById('aiOut').textContent === 'STUB COACH REPORT');
+  await page.unroute('**/generativelanguage.googleapis.com/**');
+  await page.click('#btnKeyClear');
+});
+
 await check('no JavaScript errors surfaced during the run', async () => {
   assert.deepEqual(pageErrors, []);
 });
